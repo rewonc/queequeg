@@ -1,0 +1,14 @@
+12k images
+
+
+Approach:
+
+Directly optimize the loss. (Multi class logarithmic loss)
+
+Have a baseline, and test whether things work.
+- rescaling images in various ways
+- global zero mean unit variance normalization
+- Data augmentation - on demand
+- VGGnet -- 3x3 conv filters, scale up until you see it overfitting.
+- Cyclic pooling
+- TTA -- augment images, then average them.
