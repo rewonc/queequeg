@@ -1,7 +1,6 @@
 require 'xlua'
 require 'optim'
 require 'cunn'
-dofile './provider.lua'
 local c = require 'trepl.colorize'
 
 opt = lapp[[
@@ -48,7 +47,7 @@ model:get(2).updateGradInput = function(input) return end
 print(model)
 
 print(c.blue '==>' ..' loading data')
-provider = torch.load '../imgs/processed/whale_data_provider.t7'
+provider = torch.load('../imgs/processed/whale_data_provider.t7')
 provider.trainData.data = provider.trainData.data:float()
 provider.testData.data = provider.testData.data:float()
 
