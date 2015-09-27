@@ -7,7 +7,7 @@ local c = require 'trepl.colorize'
 
 opt = lapp[[
    -s,--save                  (default "../reports/nin")      subdirectory to save logs
-   -b,--batchSize             (default 4)          batch size
+   -b,--batchSize             (default 8)          batch size
    -r,--learningRate          (default 1)        learning rate
    --learningRateDecay        (default 1e-7)      learning rate decay
    --weightDecay              (default 0.0005)      weightDecay
@@ -89,7 +89,7 @@ function train()
   local targets = torch.CudaTensor(opt.batchSize)
   local indices = torch.randperm(provider.trainData.data:size(1)):long():split(opt.batchSize)
   -- remove last element so that all the batches have equal size
-  -- indices[#indices] = nil
+  indices[#indices] = nil
 
   local tic = torch.tic()
   for t,v in ipairs(indices) do
