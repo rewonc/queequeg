@@ -129,7 +129,9 @@ function test()
   -- disable flips, dropouts and batch normalization
   model:evaluate()
   print(c.blue '==>'.." testing")
-  local bs = opt.batchSize
+  -- Note: Batch size here must be evenly divisible or this will error
+  -- upon attempting to index
+  local bs = 9
   for i=1,provider.testData.data:size(1),bs do
     local outputs = model:forward(provider.testData.data:narrow(1,i,bs))
     confusion:batchAdd(outputs, provider.testData.labels:narrow(1,i,bs))
