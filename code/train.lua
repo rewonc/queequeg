@@ -1,6 +1,8 @@
 require 'xlua'
 require 'optim'
+require 'nn'
 require 'cunn'
+require 'image'
 local c = require 'trepl.colorize'
 
 opt = lapp[[
