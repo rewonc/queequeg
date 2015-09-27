@@ -8,7 +8,7 @@ local c = require 'trepl.colorize'
 opt = lapp[[
    -s,--save                  (default "../reports/nin")      subdirectory to save logs
    -b,--batchSize             (default 8)          batch size
-   -r,--learningRate          (default 1)        learning rate
+   -r,--learningRate          (default 2e-2)        learning rate
    --learningRateDecay        (default 1e-7)      learning rate decay
    --weightDecay              (default 0.0005)      weightDecay
    -m,--momentum              (default 0.9)         momentum
@@ -71,9 +71,12 @@ criterion = nn.CrossEntropyCriterion():cuda()
 print(c.blue'==>' ..' configuring optimizer')
 optimState = {
   learningRate = opt.learningRate,
-  weightDecay = opt.weightDecay,
-  momentum = opt.momentum,
-  learningRateDecay = opt.learningRateDecay,
+  beta1 = 0.9,
+  beta2 = 0.99,
+  epsilon = 1e-8
+  -- weightDecay = opt.weightDecay,
+  -- momentum = opt.momentum,
+  -- learningRateDecay = opt.learningRateDecay,
 }
 
 
@@ -82,7 +85,7 @@ function train()
   epoch = epoch or 1
 
   -- drop learning rate every "epoch_step" epochs
-  if epoch % opt.epoch_step == 0 then optimState.learningRate = optimState.learningRate/2 end
+  -- if epoch % opt.epoch_step == 0 then optimState.learningRate = optimState.learningRate/2 end
 
   print(c.blue '==>'.." online epoch # " .. epoch .. ' [batchSize = ' .. opt.batchSize .. ']')
 
@@ -111,7 +114,7 @@ function train()
 
       return f,gradParameters
     end
-    optim.sgd(feval, parameters, optimState)
+    optim.adam(feval, parameters, optimState)
   end
 
   confusion:updateValids()
