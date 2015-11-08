@@ -102,6 +102,10 @@ def augment_data(in_data,
         return [fn(im), fn(mask)]
 
 
+    def transpose_axes(im):
+        return im.transpose(2, 0, 1)
+
+
     def color_jitter(im, multiplier_range=(-0.7, 0.7)):
         if np.max(im) > 1.0:
             raise TypeError("Must be between 01")
@@ -136,6 +140,9 @@ def augment_data(in_data,
     ).map_key(
         key='image',
         fn=color_jitter
+    ).map_key(
+        key='image',
+        fn=transpose_axes
     )
     return augmented_data
 
