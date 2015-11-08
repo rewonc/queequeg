@@ -74,8 +74,8 @@ def augment_data(in_data,
                  horizontal_flip=0.5,
                  vertical_flip=0.5,
                  affine_mode="reflect",
-                 contrast_enhance_max=1.3,
-                 brightness_enhance_max=1.3,
+                 contrast_enhance_max=1.6,
+                 brightness_enhance_max=1.6,
                  color_enhance_max=1.3,
                  ):
 
@@ -102,14 +102,14 @@ def augment_data(in_data,
         return [fn(im), fn(mask)]
 
 
-    def color_jitter(im, multiplier_range=(-1.5, 1.5)):
+    def color_jitter(im, multiplier_range=(-0.7, 0.7)):
         if np.max(im) > 1.0:
             raise TypeError("Must be between 01")
         if np.min(im) < 0.0:
             raise TypeError("Must be between 01")
+        std = np.std(im)
 
         for i in xrange(im.shape[2]):
-            std = np.std(im[:, :, i])
             multiplier = random.uniform(multiplier_range[0],
                                         multiplier_range[1])
             im[:, :, i] += std * multiplier
@@ -140,10 +140,15 @@ def augment_data(in_data,
     return augmented_data
 
 
+def batchify(dset, batch_size=16):
+    pass
+
+
 def get_train_test_gens(anno_type='Head', rel_img_path='../imgs/',
                         desired_output_size=(300, 400),
                         test_split_percentage=0.20,
-                        annotations_dir='../code/right_whale_hunt/annotations/'):
+                        annotations_dir='../code/right_whale_hunt/annotations/',
+                        chunk_size=16):
 
     annotations_filenames = os.listdir(annotations_dir)
     random.seed = 42
@@ -165,10 +170,8 @@ def get_train_test_gens(anno_type='Head', rel_img_path='../imgs/',
 
     total_num_records = len(records)
     test_split_idx = int(total_num_records * test_split_percentage)
-    # test_records = records[:test_split_idx]
-    # train_records = records[test_split_idx:]
-    train_records=records[:2]
-    test_records=records[2:]
+    test_records = records[:test_split_idx]
+    train_records = records[test_split_idx:]
 
     train_gen = dataset.from_list(train_records).random_sample(
     ).map(
@@ -194,4 +197,14 @@ def get_train_test_gens(anno_type='Head', rel_img_path='../imgs/',
         fn=partial(center_crop, desired_output_size)
     )
 
-    return train_gen, test_gen
+    out_train = augment_data(train_gen).numpy_chunk(
+        chunk_size=chunk_size,
+        keys=['image', 'mask']
+    )
+
+    out_test = test_gen.numpy_chunk(
+        chunk_size=chunk_size,
+        keys=['image', 'mask']
+    )
+
+    return out_train, out_test
