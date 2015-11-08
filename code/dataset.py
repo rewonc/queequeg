@@ -74,8 +74,9 @@ def augment_data(in_data,
                  horizontal_flip=0.5,
                  vertical_flip=0.5,
                  affine_mode="reflect",
-                 contrast_enhance_max=1.0,
-                 brightness_enhance_max=1.0,
+                 contrast_enhance_max=1.3,
+                 brightness_enhance_max=1.3,
+                 color_enhance_max=1.3,
                  ):
 
 
@@ -100,10 +101,41 @@ def augment_data(in_data,
                 **train_affine_params)
         return [fn(im), fn(mask)]
 
+
+    def color_jitter(im, multiplier_range=(-1.5, 1.5)):
+        if np.max(im) > 1.0:
+            raise TypeError("Must be between 01")
+        if np.min(im) < 0.0:
+            raise TypeError("Must be between 01")
+
+        for i in xrange(im.shape[2]):
+            std = np.std(im[:, :, i])
+            multiplier = random.uniform(multiplier_range[0],
+                                        multiplier_range[1])
+            im[:, :, i] += std * multiplier
+            return np.clip(im, 0.0, 1.0)
+
+        return im
+
+    enhance_params = dict(
+        contrast_range=(1.0 / contrast_enhance_max, contrast_enhance_max),
+        brightness_range=(1.0 / brightness_enhance_max, brightness_enhance_max),
+    )
+
     augmented_data = in_data.map(
         key=['image', 'mask'],
         out=['image', 'mask'],
         fn=same_transform
+    ).map_key(
+        key='image',
+        fn=dslib.cv2_utils.to_01
+    ).map_key(
+        key='image',
+        fn=dslib.data_augmentation.image2d.random_enhancement_augmentation,
+        kwargs=enhance_params
+    ).map_key(
+        key='image',
+        fn=color_jitter
     )
     return augmented_data
 
