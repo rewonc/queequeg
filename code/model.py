@@ -5,43 +5,19 @@ from pprint import pprint
 import numpy as np
 sys.path.append('/home/rewon/dslib/experimental/projects/vascular_anomalies')
 from vascular_libs import iou, negative_iou_differentiable
-from vascular_libs import scale_to_window
 import json
 import dataset
 
 trials_dir = os.path.join(os.environ['HOME'], '_trials_dir_')
 
 params = dslib.AttrDict(
-
-    # Model params
-    # down_slabs=(1, 2, 3, 3, 3),
-    # up_slabs=(2, 2, 2, 1, 1),
-    down_slabs=(3, 3),
-    up_slabs=(2, 2),
-    data_downsample_factor=1,
-    seg_downsample_factor=1,
-    base_num_filters=64,
     dropout_probability=0.3,
-
-    # training params
     num_chunks=10000,
     time_limit=4 * 60 * 60,
     learning_rate=2e-3,
     validate_interval=10,
     chunk_size=16,
-
     batch_shape=(16, 3, 300, 400)
-    # data augmentation params
-    # zoom_max_multiplier=1.6,
-    # stretch_max_multiplier=1.3,
-    # shear_max=0.01,
-    # translation_max_distance=45,
-    # rotation_max=0.0375,
-    # horizontal_flip=0.5,
-    # vertical_flip=0.0,
-    # contrast_enhance_max=1.0,  # Range is [1/max, max] like with zoom
-    # brightness_enhance_max=1.0,
-    # affine_mode="constant",
 )
 
 
@@ -78,161 +54,35 @@ def make_summary():
     return summary
 
 
-def make_model(params):
-    import treeano.nodes as tn
-    import treeano.sandbox.nodes.batch_normalization as bn
-    import treeano.sandbox.nodes.input_scaling as input_scaling
 
-    depth = len(params.down_slabs)
-
-    layers = [
-        tn.InputNode("x", shape=params.batch_shape),
-        tn.DnnConv2DWithBiasNode("conv_1a", num_filters=32),
-        tn.VeryLeakyReLUNode("relu_1a"),
-        tn.GaussianDropoutNode("do_1a"),
-        tn.DnnConv2DWithBiasNode("conv_1b", num_filters=64),
-        tn.VeryLeakyReLUNode("relu_1b"),
-        tn.GaussianDropoutNode("do_1b"),
-        tn.DnnConv2DWithBiasNode("conv_1b", num_filters=64),
-        tn.VeryLeakyReLUNode("relu_1b"),
-        tn.GaussianDropoutNode("do_1b"),
-        bn.BatchNormalizationNode("bn_1"),
-        tn.MaxPool2DNode("mp_1", pool_size=(2, 2)),
-
-        tn.DnnConv2DWithBiasNode("conv_2a", num_filters=64),
-        tn.VeryLeakyReLUNode("relu_2a"),
-        tn.GaussianDropoutNode("do_2a"),
-        tn.DnnConv2DWithBiasNode("conv_2b", num_filters=128),
-        tn.VeryLeakyReLUNode("relu_2b"),
-        tn.GaussianDropoutNode("do_2b"),
-        tn.DnnConv2DWithBiasNode("conv_2b", num_filters=128),
-        tn.VeryLeakyReLUNode("relu_2b"),
-        tn.GaussianDropoutNode("do_2b"),
-        bn.BatchNormalizationNode("bn_2"),
-        tn.MaxPool2DNode("mp_2", pool_size=(2, 2)),
-
-        tn.DnnConv2DWithBiasNode("conv_3a", num_filters=128),
-        tn.VeryLeakyReLUNode("relu_3a"),
-        tn.GaussianDropoutNode("do_3a"),
-        tn.DnnConv2DWithBiasNode("conv_3b", num_filters=256),
-        tn.VeryLeakyReLUNode("relu_3b"),
-        tn.GaussianDropoutNode("do_3b"),
-        tn.DnnConv2DWithBiasNode("conv_3b", num_filters=256),
-        tn.VeryLeakyReLUNode("relu_3b"),
-        tn.GaussianDropoutNode("do_3b"),
-        bn.BatchNormalizationNode("bn_3"),
-
-        tn.SpatialRepeatNDNode('upsample1', upsample_factor=(2, 2)),
-        tn.SpatialRepeatNDNode('upsample2', upsample_factor=(2, 2))
-    ]
-
-    layers.append(tn.DnnConv2DWithBiasNode(
-        "final_conv",
-        num_filters=1,
-        filter_size=(1, 1)),
-        )
-
-    layers.append(tn.SigmoidNode('pred'))
-
-    model = tn.HyperparameterNode(
-        "model",
-        tn.SequentialNode("model_seq", layers),
-        inits=[treeano.inits.OrthogonalInit()],
-        conv_pad='same',
-        filter_size=(3, 3),
-        dropout_probability=params.dropout_probability,
-    )
-
-    cost = negative_iou_differentiable
-
-    model = tn.AdamNode(
-        "adam", {
-            "subtree": model,
-            "cost": tn.TotalCostNode(
-                "cost", {
-                    "pred": tn.ReferenceNode("pred_ref", reference="pred"),
-                    "target": tn.InputNode(
-                        "y",
-                        shape=(params.batch_shape),
-                        dtype=theano.config.floatX
-                    )
-                },
-                cost_function=cost
-            )
-        },
-        learning_rate=params.learning_rate,
-    )
-
-    return model
 
 
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser(description='Train a model on whales.')
-    parser.add_argument("-s", "--set-param", action="append",
-                        help="Overrides a parameter. Use like '-s key=val'," +
-                        " (can be specified multiple times)",
-                        dest="param_overrides", default=[])
-    args = parser.parse_args()
 
     trial_name = 'whale_segmentation'
     snippets = [
         ["data", "dataset.py"],
     ]
-
     with dslib.trial.run_trial(trial_name=trial_name,
                                trials_dir=trials_dir,
                                description=[],
                                snippets=snippets) as trial:
-        os.mkdir(trial.file_path('segmentations'))
 
-        # Store params for future reference.
-        pprint(params)
-        params_filepath = trial.file_path('params.json')
-        with open(params_filepath, 'w') as f:
-            json.dump(params, f)
-
-        data = trial.load_module("data").Data(params)
-        train_ds = data.dataset(is_validation_set=False)
-        valid_ds = data.dataset(is_validation_set=True)
+        train_ds, valid_ds = dataset.get_train_test_gens()
 
         with train_ds as train_gen, valid_ds as valid_gen:
-            valid_chunk = valid_gen.next()
 
-            # If we import theano after we open the datasets,
-            # we can multiprocess
+            valid_chunk = valid_gen.next()
             import theano
             import treeano
             import canopy
             import canopy.sandbox.monitor_ui
 
-            # Make Model/Network
-            if params.previous_trial is not None:
-                if params.use_previous_network:
-                    print "Using network from %d" % params.previous_trial
-                    network = ttu.load_previous_network(
-                        trial_name=trial_name,
-                        iteration_num=params.previous_trial,
-                        trials_dir=trials_dir,
-                        load_previous_architecture=True)
-                else:
-                    print "Using weights from %d" % params.previous_trial
-                    model = make_model(params)
-                    print(model)
-                    network = model.network()
-                    ttu.load_previous_network(
-                        trial_name=trial_name,
-                        iteration_num=params.previous_trial,
-                        network=network,
-                        trials_dir=trials_dir,
-                        load_previous_architecture=False,
-                        strict=False)
 
-            else:
-                print "Making new model."
-                model = make_model(params)
-                print(model)
-                network = model.network()
+            print "Making new model."
+            model = make_model(params)
+            print(model)
+            network = model.network()
 
             # build eagerly to share weights
             network.build()

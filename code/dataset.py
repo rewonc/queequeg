@@ -2,6 +2,7 @@ import cv2
 import os
 import dslib
 from dslib import dataset
+from dslib import cv2_utils
 import json
 import re
 import numpy as np
@@ -66,16 +67,16 @@ def center_crop(output_size, im):
 
 
 def augment_data(in_data,
-                 zoom_max_multiplier=1.5,
-                 stretch_max_multiplier=1.5,
-                 translation_max_distance=10,
+                 zoom_max_multiplier=1.3,
+                 stretch_max_multiplier=1.2,
+                 translation_max_distance=4,
                  rotation_max=0.5,
                  shear_max=0.05,
                  horizontal_flip=0.5,
                  vertical_flip=0.5,
                  affine_mode="reflect",
-                 contrast_enhance_max=1.6,
-                 brightness_enhance_max=1.6,
+                 contrast_enhance_max=1.4,
+                 brightness_enhance_max=1.4,
                  color_enhance_max=1.3,
                  ):
 
@@ -106,7 +107,7 @@ def augment_data(in_data,
         return im.transpose(2, 0, 1)
 
 
-    def color_jitter(im, multiplier_range=(-0.7, 0.7)):
+    def color_jitter(im, multiplier_range=(-0.5, 0.5)):
         if np.max(im) > 1.0:
             raise TypeError("Must be between 01")
         if np.min(im) < 0.0:
@@ -132,17 +133,17 @@ def augment_data(in_data,
         fn=same_transform
     ).map_key(
         key='image',
-        fn=dslib.cv2_utils.to_01
-    ).map_key(
-        key='image',
-        fn=dslib.data_augmentation.image2d.random_enhancement_augmentation,
-        kwargs=enhance_params
+        fn=cv2_utils.to_01
+    # ).map_key(
+    #     key='image',
+    #     fn=dslib.data_augmentation.image2d.random_enhancement_augmentation,
+    #     kwargs=enhance_params
     ).map_key(
         key='image',
         fn=color_jitter
-    ).map_key(
-        key='image',
-        fn=transpose_axes
+    # ).map_key(
+    #     key='image',
+    #     fn=transpose_axes
     )
     return augmented_data
 
@@ -192,7 +193,7 @@ def get_train_test_gens(anno_type='Head', rel_img_path='../imgs/',
         fn=partial(center_crop, desired_output_size)
     )
 
-    test_gen = dataset.from_list(train_records).random_sample(
+    test_gen = dataset.from_list(test_records).random_sample(
     ).map(
         key='filename',
         out='image',
