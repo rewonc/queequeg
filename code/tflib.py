@@ -22,11 +22,20 @@ def _variable_summary(x):
     """
     Summarize the value of a variable.
     """
-    variable_name = x.name
+    variable_name = x.op.name
     tf.histogram_summary(variable_name + '/values', x)
 
 
-def convBNReLU(input_tensor, kernel_size, out_filters, scope, summarize=False):
+def max_pool_2x2(t):
+    '''
+    Run a 2x2 max pooling operation
+    '''
+    return tf.nn.max_pool(t, ksize=[1, 2, 2, 1], strides=[1, 2, 2, 1],
+                          padding='SAME', name=t.op.name + '/pool')
+
+
+def conv_bn_relu(input_tensor, kernel_size, out_filters, scope,
+                 summarize=False):
     '''
     Add a spatial convolution to input_tensor, with batch norm and ReLU.
 
