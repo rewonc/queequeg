@@ -143,3 +143,15 @@ def conv_bn_relu(input_tensor, kernel_size, out_filters, scope,
             _variable_summary(gamma)
 
     return relu
+
+
+def negative_iou(pred, truth):
+    '''
+    Truth and label tensors contain 0, 1
+    Calculate IOU.
+    '''
+    epsilon = 1e-2
+    intersection = tf.reduce_sum(pred*truth)
+    union = tf.reduce_sum(tf.maximum(pred, truth))
+    union = tf.maximum(union, epsilon)
+    return -1.0*(intersection/union)
