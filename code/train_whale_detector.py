@@ -8,8 +8,8 @@ CONSTANTS
 '''
 
 BATCH_SIZE = 4
-IMWIDTH = 300
-IMHEIGHT = 400
+IMWIDTH = 200
+IMHEIGHT = 280
 TESTSPLIT = 0.20
 TRIAL_NAME = 'whale1'
 
@@ -87,7 +87,7 @@ conv3b_do = tflib.dropout(conv3b, keep_prob)
 conv3c = tflib.conv_bn_relu(conv3b_do,
                             kernel_size=[3, 3],
                             out_filters=128,
-                            scope="conv2c",
+                            scope="conv3c",
                             summarize=True)
 
 conv3c_do = tflib.dropout(conv3c, keep_prob)
@@ -102,7 +102,7 @@ deconv1 = tflib.deconv_bn_relu(conv3c_do,
 
 deconv1_do = tflib.dropout(deconv1, keep_prob)
 
-deconv2 = tflib.deconv_bn_relu(conv3c_do,
+deconv2 = tflib.deconv_bn_relu(deconv1,
                                kernel_size=[3, 3],
                                stride=[2, 2],
                                out_filters=32,
@@ -119,7 +119,7 @@ predictions = tflib.conv_bn_relu(deconv2_do,
                                  summarize=True)
 
 predictions_1 = tf.sigmoid(predictions)
-negative_iou = tflib.negative_iou(normalized, y_in)
+negative_iou = tflib.negative_iou(predictions_1, y_in)
 tf.scalar_summary("negative iou", negative_iou)
 optimizer = tf.train.AdamOptimizer(2e-3).minimize(negative_iou)
 summary_op = tf.merge_all_summaries()
